@@ -36,6 +36,8 @@ if __name__=="__main__":
     parser.add_argument("--NBS_type",metavar="NBS_type",type=str,required=False,
                         choices=['gonon','maeda'],default='gonon',
                         help="Method used to numerically estimate the Branching Space and the associated projector; ultimately changes the type of convergence test for the gradient.")
+    parser.add_argument("--maxCoordinates",metavar="maxCoordinates",type=float,required=False,default=0.02,
+                        help="Max Coordinates for current step")
     parser.add_argument("--trustRadius",metavar="trustRadius",type=float,required=False,default=1.0,
                         help="Trust Radius for Quasi-Newton Search Step")
     parser.add_argument("--rootA",metavar="rootA",type=int,required=False,default=1,
@@ -56,6 +58,7 @@ if __name__=="__main__":
     energyDifferenceSwitch=args.deltaESwitch
     optCriteria=args.optCriteria
     NBS_type=args.NBS_type
+    max_coordinates=args.maxCoordinates
     trust_radius=args.trustRadius
     rootA=args.rootA
     rootB=args.rootB
@@ -300,14 +303,17 @@ if __name__=="__main__":
         ## - [ ] TODO implement direct formula for BFGS inverse
         if c==0:
             currentHessianAverage=0.5*np.eye(NCoords,NCoords) # S_n
-            # currentHessianSquaredDifference=0*np.eye(NCoords,NCoords) # K_n
+            currentHessianSquaredDifference=0*np.eye(NCoords,NCoords) # K_n
             # currentHessianSquaredDifference=1*np.eye(NCoords,NCoords) # K_n
-            currentInverseHessianSquaredDifference=10000*np.eye(NCoords,NCoords)
-            currentHessianSquaredDifference=scipy.linalg.inv(currentInverseHessianSquaredDifference)
+            # currentInverseHessianSquaredDifference=10000*np.eye(NCoords,NCoords)
+            # currentHessianSquaredDifference=scipy.linalg.inv(currentInverseHessianSquaredDifference)
             currentLM=0.1 # lambda_n
         else:
             currentHessianAverage=MECISearch_MODULE.BFGSUpdate(previousCoordinatesDifference,previousGradientAverage,previousHessianAverage,currentGradientAverage)
-            currentHessianSquaredDifference=MECISearch_MODULE.BFGSUpdate(previousCoordinatesDifference,previousGradientSquaredDifference,previousHessianSquaredDifference,currentGradientSquaredDifference)
+            if c==1:
+                currentHessianSquaredDifference=MECISearch_MODULE.BFGSUpdate(previousCoordinatesDifference,previousGradientSquaredDifference,previousHessianSquaredDifference,currentGradientSquaredDifference,first_update=True)
+            else:
+                currentHessianSquaredDifference=MECISearch_MODULE.BFGSUpdate(previousCoordinatesDifference,previousGradientSquaredDifference,previousHessianSquaredDifference,currentGradientSquaredDifference)
             intermediary_hessian=(previousHessianAverage+previousLM*previousHessianSquaredDifference)
             currentLM=(
                     (previousEnergyDifference**2-np.dot(previousGradientSquaredDifference,np.dot(scipy.linalg.inv(intermediary_hessian),previousGradientAverage))) # Ω_n**2-k_n·(S_n+λ_nK_n)^-1·s_n
@@ -333,9 +339,9 @@ if __name__=="__main__":
         print("intermediary_hessian",intermediary_hessian)
         print("intermediary_gradient",intermediary_gradient)
         currentCoordinatesDifference=-np.dot(scipy.linalg.inv(intermediary_hessian),intermediary_gradient)
-        maxCoordinates=np.max(np.abs(currentCoordinatesDifference))
-        if maxCoordinates>=0.02:
-            currentCoordinatesDifference=(0.02/maxCoordinates)*currentCoordinatesDifference
+        currentMaxCoordinates=np.max(np.abs(currentCoordinatesDifference))
+        if currentMaxCoordinates>=max_coordinates:
+            currentCoordinatesDifference=(max_coordinates/currentMaxCoordinates)*currentCoordinatesDifference
 
         nextCoordinates=currentCoordinates+currentCoordinatesDifference
                 # print("currentCoordinates",currentCoordinates)
