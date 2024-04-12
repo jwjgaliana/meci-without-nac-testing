@@ -33,6 +33,9 @@ if __name__=="__main__":
     parser.add_argument("--optCriteria",metavar="optCriteria",type=str,required=False,
                         choices=['tight','verytight','default','loose'],default='default',
                         help="Convergence Criteria Pre-Sets for Gradient and Displacements (similar to Gaussian16)")
+    parser.add_argument("--NBS_type",metavar="NBS_type",type=str,required=False,
+                        choices=['gonon','maeda'],default='gonon',
+                        help="Method used to numerically estimate the Branching Space and the associated projector; ultimately changes the type of convergence test for the gradient.")
     parser.add_argument("--trustRadius",metavar="trustRadius",type=float,required=False,default=1.0,
                         help="Trust Radius for Quasi-Newton Search Step")
     parser.add_argument("--rootA",metavar="rootA",type=int,required=False,default=1,
@@ -52,6 +55,7 @@ if __name__=="__main__":
     energyDifferenceThs=args.deltaEThreshold
     energyDifferenceSwitch=args.deltaESwitch
     optCriteria=args.optCriteria
+    NBS_type=args.NBS_type
     trust_radius=args.trustRadius
     rootA=args.rootA
     rootB=args.rootB
@@ -153,7 +157,8 @@ if __name__=="__main__":
     currentHessian=None
 
     pflog=open("ProgressionFile.log","w")
-    hessianlog=open("HessianFile.log","w")
+    hessianlog1=open("HessianFileSED.log","w")
+    hessianlog2=open("HessianFileAE.log","w")
     pflog.write("Energy Difference Convergence Criterion {}".format(energyDifferenceThs)+"\n")
     pflog.write("Energy Difference Switching   Threshold {}".format(energyDifferenceSwitch)+"\n")
     pflog.write("Maximum Force Convergence Criterion     {}".format(gradientMaxThs)+"\n")
@@ -237,14 +242,16 @@ if __name__=="__main__":
     pflog.write(to_print.to_string())
     pflog.write("\n")
     pflog.close()
-    hessianlog.close()
+    hessianlog1.close()
+    hessianlog2.close()
     ####################################################
     # OPTIMIZATION LOOP                                #
     ####################################################
     while not np.all(convergenceTest) and c<cmax:
         freq=False
         pflog=open("ProgressionFile.log","a+")
-        hessianlog=open("HessianFile.log","a+")
+        hessianlog1=open("HessianFileSED.log","a+")
+        hessianlog2=open("HessianFileAE.log","a+")
         pflog.write("step {}".format(c)+"\n")
 
         #################################################
@@ -344,14 +351,32 @@ if __name__=="__main__":
         ###############################################
 
         if c!=0:
-            eigenvalues,eigenvectors=scipy.linalg.eigh(currentHessianSquaredDifference)
-            currentBranchingSpaceVectorLengths=eigenvalues[-2:] # Index Zero is the lowest, One the highest
-            currentBranchingSpaceVectors=eigenvectors.T[-2:] # Index Zero is the lowest, One the highest
-            currentBranchingSpaceProjector=(
-                    np.tensordot(currentBranchingSpaceVectors[0],currentBranchingSpaceVectors[0],axes=0)
-                    +
-                    np.tensordot(currentBranchingSpaceVectors[1],currentBranchingSpaceVectors[1],axes=0)
-                    )
+            if NBS_type=="gonon":
+                eigenvalues,eigenvectors=scipy.linalg.eigh(currentHessianSquaredDifference)
+                currentBranchingSpaceVectorLengths=eigenvalues[-2:] # Index Zero is the lowest, One the highest
+                currentBranchingSpaceVectors=eigenvectors.T[-2:] # Index Zero is the lowest, One the highest
+                currentBranchingSpaceProjector=(
+                        np.tensordot(currentBranchingSpaceVectors[0],currentBranchingSpaceVectors[0],axes=0)
+                        +
+                        np.tensordot(currentBranchingSpaceVectors[1],currentBranchingSpaceVectors[1],axes=0)
+                        )
+            elif NBS_type=="maeda":
+                overlap=np.empty(4).reshape(2,2)
+                overlap[0,0]=np.dot(previousGradientDifference,previousGradientDifference)
+                overlap[0,1]=np.dot(currentGradientDifference,previousGradientDifference)
+                overlap[1,0]=np.dot(previousGradientDifference,currentGradientDifference)
+                overlap[1,1]=np.dot(currentGradientDifference,currentGradientDifference)
+                inversed_overlap=scipy.linalg.inv(overlap)
+                currentBranchingSpaceProjector=(
+                        inversed_overlap[0,0]*np.tensordot(previousGradientDifference,previousGradientDifference,axes=0)
+                        +
+                        inversed_overlap[0,1]*np.tensordot(currentGradientDifference,previousGradientDifference,axes=0)
+                        +
+                        inversed_overlap[1,0]*np.tensordot(previousGradientDifference,currentGradientDifference,axes=0)
+                        +
+                        inversed_overlap[1,1]*np.tensordot(currentGradientDifference,currentGradientDifference,axes=0)
+                        )
+
             currentIntersectionSpaceProjector=(
                     np.eye(NCoords)
                     -currentBranchingSpaceProjector
@@ -383,6 +408,7 @@ if __name__=="__main__":
                                 gradientRMSFlag,
                                 coordinatesDifferenceMaxFlag,
                                 coordinatesDifferenceRMSFlag,])
+        pflog.write("Calculation method for BS projector (hence seam gradient) {}\n".format(NBS_type))
         pflog.write("Current Lagrange Multiplier {}\n".format(currentLM))
         pflog.write("Total Energy SA {}\n".format(currentEnergyA))
         pflog.write("Total Energy SB {}\n".format(currentEnergyB))
@@ -420,12 +446,17 @@ if __name__=="__main__":
         pflog.write(to_print.to_string())
         pflog.write("\n")
         if bohr:
-            hessianlog.write("Hessian Squared Energy Difference (updated) (Eh^2/Bohr^2) at step {}\n".format(c))
+            hessianlog1.write("Hessian Squared Energy Difference (updated) (Eh^2/Bohr^2) at step {}\n".format(c))
+            hessianlog2.write("Hessian Energy Average (updated) (Eh^2/Bohr^2) at step {}\n".format(c))
         else:
-            hessianlog.write("Hessian Squared Energy Difference (updated) (Eh^2/Angstrom^2) at step {}\n".format(c))
-        MECISearch_MODULE.writeTriangularMatrix(currentHessianSquaredDifference,hessianlog)
-        hessianlog.write("\n")
-        hessianlog.close()
+            hessianlog1.write("Hessian Squared Energy Difference (updated) (Eh^2/Angstrom^2) at step {}\n".format(c))
+            hessianlog2.write("Hessian Energy Average (updated) (Eh^2/Angstrom^2) at step {}\n".format(c))
+        MECISearch_MODULE.writeTriangularMatrix(currentHessianSquaredDifference,hessianlog1)
+        MECISearch_MODULE.writeTriangularMatrix(currentHessianAverage,hessianlog2)
+        hessianlog1.write("\n")
+        hessianlog2.write("\n")
+        hessianlog1.close()
+        hessianlog2.close()
         if not np.all(convergenceTest):
             c+=1
             if not calcAllFreq:
