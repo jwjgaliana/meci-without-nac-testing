@@ -5,7 +5,7 @@ import scipy.optimize
 import sys,os
 import time
 
-import MECI as meci
+import TOOLBOX as TLB
 import CONSTANTS as CST
 import MECISearch_MODULE
 
@@ -237,7 +237,7 @@ if __name__=="__main__":
     ####################################################
     # SYSTEM DEFINITION                                # 
     ####################################################
-    NAtoms,NCoords,atomicNumbers,initialCoordinates=meci.fchk2coordinates("step_0_A.fchk") 
+    NAtoms,NCoords,atomicNumbers,initialCoordinates=TLB.fchk2coordinates("step_0_A.fchk") 
     initialCoordinates=initialCoordinates.reshape(NAtoms,3)
     pflog.write("Initial Coordinates (Angstrom)\n")
     to_print=pd.DataFrame(initialCoordinates,index=atomicNumbers)
@@ -264,9 +264,9 @@ if __name__=="__main__":
         ## - freq
         ## - mw
         ## - bohr
-        NAtoms,NCoords,atomicNumbers,currentCoordinates=meci.fchk2coordinates("step_{}_A.fchk".format(c))
+        NAtoms,NCoords,atomicNumbers,currentCoordinates=TLB.fchk2coordinates("step_{}_A.fchk".format(c))
         atomicNumbers3=np.array([[_]*3 for _ in atomicNumbers]).flatten()
-        atomicMasses3=meci.fchk2derivatives("step_{}_A.fchk".format(c),freq=False)[2]
+        atomicMasses3=TLB.fchk2derivatives("step_{}_A.fchk".format(c),freq=False)[2]
         atomicMasses3*=CST.AMU_TO_ME
         pflog.write("step {} was a Force-only Calculation".format(c)+"\n")
         currentEnergyA,currentGradientA=MECISearch_MODULE.getStateDerivatives("step_{}_A.fchk".format(c),mw=mw,freq=freq)
@@ -525,8 +525,8 @@ if __name__=="__main__":
             os.system("formchk16 {}".format(chkfilenames[1]))
             os.system("rm {}".format(chkfilenames[1]))
             fchkfilenames=[comfilenames[0].split(".")[0]+".fchk",comfilenames[1].split(".")[0]+".fchk"]
-        nextEnergyA=meci.fchk2derivatives(fchkfilenames[0],mw=mw,freq=freq)[0]
-        nextEnergyB=meci.fchk2derivatives(fchkfilenames[1],mw=mw,freq=freq)[0]
+        nextEnergyA=TLB.fchk2derivatives(fchkfilenames[0],mw=mw,freq=freq)[0]
+        nextEnergyB=TLB.fchk2derivatives(fchkfilenames[1],mw=mw,freq=freq)[0]
         nextEnergyDifference=nextEnergyB-nextEnergyA
         nextEnergyAverage=0.5*(nextEnergyA+nextEnergyB)
         actualDifference=nextEnergyAverage-currentEnergyAverage

@@ -5,15 +5,15 @@ import scipy.optimize
 import sys,os
 import time
 
-import MECI as meci
+import TOOLBOX as TLB
 import CONSTANTS as CST
 
 def getStateDerivatives(filename=None,mw=True,freq=False):
-    NAtoms,NCoords,atomicNumbers,currentCoordinates=meci.fchk2coordinates(filename) # coordinates in Angstroms
+    NAtoms,NCoords,atomicNumbers,currentCoordinates=TLB.fchk2coordinates(filename) # coordinates in Angstroms
     if freq:
-        currentEnergy,currentGradient,currentHessian=meci.fchk2derivatives(filename,mw=mw,freq=freq)[:3]
+        currentEnergy,currentGradient,currentHessian=TLB.fchk2derivatives(filename,mw=mw,freq=freq)[:3]
     else:
-        currentEnergy,currentGradient=meci.fchk2derivatives(filename,mw=mw,freq=freq)[:2]
+        currentEnergy,currentGradient=TLB.fchk2derivatives(filename,mw=mw,freq=freq)[:2]
     currentGradient=currentGradient/CST.BOHR_TO_ANGSTROM
     if freq:
         currentHessian=currentHessian/(CST.BOHR_TO_ANGSTROM**2)
@@ -22,19 +22,29 @@ def getStateDerivatives(filename=None,mw=True,freq=False):
     else:
         return currentEnergy,currentGradient
 
-def BFGSUpdate(previousDisplacement,previousGradient,previousHessian,currentGradient):
+def BFGSUpdate(previousDisplacement,previousGradient,previousHessian,currentGradient,first_update=False):
     deltaGradient=currentGradient-previousGradient
-    currentHessian=(
-            previousHessian
-            +
-            np.tensordot(deltaGradient,deltaGradient,axes=0)
-            /
-            np.dot(deltaGradient,previousDisplacement)
-            -
-            (np.tensordot(np.dot(previousHessian,previousDisplacement),np.dot(previousHessian,previousDisplacement),axes=0))
-            /
-            (np.dot(previousDisplacement,np.dot(previousHessian,previousDisplacement)))
-            )
+    if first_update:
+        currentHessian=(
+                previousHessian
+                +
+                np.tensordot(deltaGradient,deltaGradient,axes=0)
+                /
+                np.dot(deltaGradient,previousDisplacement)
+                )
+
+    else:
+        currentHessian=(
+                previousHessian
+                +
+                np.tensordot(deltaGradient,deltaGradient,axes=0)
+                /
+                np.dot(deltaGradient,previousDisplacement)
+                -
+                (np.tensordot(np.dot(previousHessian,previousDisplacement),np.dot(previousHessian,previousDisplacement),axes=0))
+                /
+                (np.dot(previousDisplacement,np.dot(previousHessian,previousDisplacement)))
+                )
     return currentHessian
 
 def writeComFileFromXYZ(comfile,header,xyzfile):
