@@ -16,4 +16,4 @@ Testing python interface to Gaussian16 for a MECI optimizer without the use of n
 - [ ] update references
 
 ## References
-- [Sanz García, JCTC, 2024] Juan Sanz García, Rosa Maskri, Alexander Mitrushchenkov, and Loïc Joubert-Doriol, J. Chem. Theory Comput. 2024, 20, 13, 5643–5654, [https://pubs.acs.org/doi/abs/10.1021/acs.jctc.4c00326](pubs.acs.org/doi/abs/10.1021/acs.jctc.4c00326)
+- [Sanz García, JCTC, 2024] Juan Sanz García, Rosa Maskri, Alexander Mitrushchenkov, and Loïc Joubert-Doriol, J. Chem. Theory Comput. 2024, 20, 13, 5643–5654, [pubs.acs.org/doi/abs/10.1021/acs.jctc.4c00326](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.4c00326)
