@@ -8,11 +8,13 @@ Testing python interface to Gaussian16 for a MECI optimizer without the use of n
     - Tentatives toward Composed steps [Sicilia, JCTC, 2008] and Double Newton-Raphson [Ruiz-Barragan, JCTC, 2013]
 ## TODO-list
 - [X] add home-code with quasi-Newton + numerical branching-space
-- [ ] sort and clean-up most recent and tested versions [diff. between MECI_Optimization.py and MECISearch_FUNCTION.py]
+- [ ] sort and clean-up most recent and tested versions [diff. between MECI_Optimization.py(old) and MECISearch_FUNCTION.py(recent)]
+    - [ ] merge MECI.py (old) and TOOLBOX (new)
+    - [ ] link TOOLBOX to associated git repository
+    - [ ] merge all (SLM, home-code of quasi-Newton + numerical branching-space [old and recent])
 - [ ] try implementing ALM version from [Sanz García, JCTC, 2024]
-- [ ] merge SLM with home-code of quasi-Newton + numerical éranching-space
-- [ ] upload tests cases [sym. and nosym. dummy molecules, m22, m23]
-- [ ] interface with openMolcas for (MS,XMS,RMS)-CASPT2 energies and analytical gradients
+- [ ] upload and validate tests cases [sym. and nosym. dummy molecules, m22, m23]
+- [ ] interface with openMolcas for (MS,XMS,RMS)-CASPT2 energies and analytical gradients and/or NAC
 - [ ] update references
 
 ## References
